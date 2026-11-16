@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 from backend.extensions import db
 
 class Booking(db.Model):
@@ -22,6 +22,10 @@ class Booking(db.Model):
         self.status = status
 
     def to_dict(self):
+        can_cancel = False
+        if self.status == "Booked" and self.trek and self.trek.start_date:
+            can_cancel = (self.trek.start_date > date.today())
+
         return {
             "id": self.id,
             "user_id": self.user_id,
@@ -34,5 +38,6 @@ class Booking(db.Model):
             "trek_end_date": self.trek.end_date.isoformat() if self.trek and self.trek.end_date else None,
             "num_slots": self.num_slots,
             "status": self.status,
-            "booking_date": self.booking_date.isoformat() if self.booking_date else None
+            "booking_date": self.booking_date.isoformat() if self.booking_date else None,
+            "can_cancel": can_cancel
         }

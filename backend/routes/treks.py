@@ -1,3 +1,4 @@
+from datetime import date
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import verify_jwt_in_request, get_jwt, get_jwt_identity
 from backend.extensions import db, cache
@@ -42,25 +43,48 @@ def get_treks():
     if max_price is not None:
         query = query.filter(Trek.price <= max_price)
 
-    # Status visibility based on role
+    # Status and visibility scoping based on role (verified against DB status)
     current_role = None
+    current_user_id = None
     try:
         verify_jwt_in_request(optional=True)
-        claims = get_jwt()
-        if claims:
-            current_role = claims.get("role")
+        identity = get_jwt_identity()
+        if identity:
+            user = db.session.get(User, int(identity))
+            if user and user.status == "active":
+                current_user_id = user.id
+                current_role = user.role
     except Exception:
         pass
 
     requested_status = request.args.get("status", "").strip().capitalize()
-    if requested_status in VALID_STATUSES:
-        if current_role in ["admin", "staff"]:
+
+    if current_role == "admin":
+        # Admin sees all treks across the platform
+        if requested_status in VALID_STATUSES:
             query = query.filter_by(status=requested_status)
-        elif requested_status in ["Approved", "Open"]:
+        assigned_staff_id = request.args.get("assigned_staff_id", type=int)
+        if assigned_staff_id:
+            query = query.filter_by(assigned_staff_id=assigned_staff_id)
+
+    elif current_role == "staff":
+        # Staff sees their assigned treks by default (or public catalog if view=all)
+        view = request.args.get("view", "assigned").strip().lower()
+        if view == "all":
+            query = query.filter(Trek.status.in_(["Approved", "Open"]))
+            if requested_status in ["Approved", "Open"]:
+                query = query.filter_by(status=requested_status)
+        else:
+            query = query.filter(Trek.assigned_staff_id == current_user_id)
+            if requested_status in VALID_STATUSES:
+                query = query.filter_by(status=requested_status)
+
+    else:
+        # Default user (registered trekker or guest): only Approved and Open treks
+        if requested_status in ["Approved", "Open"]:
             query = query.filter_by(status=requested_status)
-    elif current_role not in ["admin", "staff"]:
-        # Public users only see open and approved treks
-        query = query.filter(Trek.status.in_(["Approved", "Open"]))
+        else:
+            query = query.filter(Trek.status.in_(["Approved", "Open"]))
 
     treks = query.order_by(Trek.start_date.asc()).all()
 
@@ -72,7 +96,7 @@ def get_treks():
 
 @treks_bp.route("/<int:trek_id>", methods=["GET"])
 def get_trek(trek_id):
-    trek = Trek.query.get(trek_id)
+    trek = db.session.get(Trek, trek_id)
     if not trek:
         return jsonify({"status": "error", "message": "Trek not found"}), 404
 
@@ -83,15 +107,17 @@ def get_trek(trek_id):
             "data": trek.to_dict()
         }), 200
 
-    # For non-public statuses (Pending, Closed, Completed), verify permissions
+    # For non-public statuses (Pending, Closed, Completed), verify permissions against DB
     current_role = None
     current_user_id = None
     try:
         verify_jwt_in_request(optional=True)
-        claims = get_jwt()
-        if claims:
-            current_role = claims.get("role")
-            current_user_id = int(get_jwt_identity())
+        identity = get_jwt_identity()
+        if identity:
+            user = db.session.get(User, int(identity))
+            if user and user.status == "active":
+                current_user_id = user.id
+                current_role = user.role
     except Exception:
         pass
 
@@ -118,7 +144,7 @@ def create_trek():
 
     assigned_staff_id = data.get("assigned_staff_id")
     if assigned_staff_id:
-        staff_user = User.query.get(assigned_staff_id)
+        staff_user = db.session.get(User, assigned_staff_id)
         if not staff_user or staff_user.role != "staff":
             return jsonify({"status": "error", "message": "Assigned user must exist and have the 'staff' role"}), 400
 
@@ -151,7 +177,7 @@ def create_trek():
 @treks_bp.route("/<int:trek_id>", methods=["PUT"])
 @staff_or_admin_required
 def update_trek(trek_id):
-    trek = Trek.query.get(trek_id)
+    trek = db.session.get(Trek, trek_id)
     if not trek:
         return jsonify({"status": "error", "message": "Trek not found"}), 404
 
@@ -174,14 +200,28 @@ def update_trek(trek_id):
     if "assigned_staff_id" in data and current_role == "admin":
         staff_id = data["assigned_staff_id"]
         if staff_id:
-            staff_user = User.query.get(staff_id)
+            staff_user = db.session.get(User, staff_id)
             if not staff_user or staff_user.role != "staff":
                 return jsonify({"status": "error", "message": "Assigned user must have 'staff' role"}), 400
             trek.assigned_staff_id = staff_id
         else:
             trek.assigned_staff_id = None
 
-    # Apply validated changes (including status and dates safely)
+    # Date and status business guards
+    new_status = cleaned["status"]
+    if new_status == "Completed" and cleaned["start_date"] > date.today():
+        return jsonify({"status": "error", "message": "Cannot mark trek as completed before its start date"}), 400
+
+    if new_status == "Open" and cleaned["end_date"] < date.today():
+        return jsonify({"status": "error", "message": "Cannot open a trek whose end date has passed"}), 400
+
+    # Cascade: auto-complete active bookings when trek completes
+    if new_status == "Completed" and trek.status != "Completed":
+        active_bookings = Booking.query.filter_by(trek_id=trek.id, status="Booked").all()
+        for b in active_bookings:
+            b.status = "Completed"
+
+    # Apply validated changes
     trek.name = cleaned["name"]
     trek.location = cleaned["location"]
     trek.difficulty = cleaned["difficulty"]
@@ -207,7 +247,7 @@ def update_trek(trek_id):
 @treks_bp.route("/<int:trek_id>/status", methods=["PATCH"])
 @staff_or_admin_required
 def update_trek_status(trek_id):
-    trek = Trek.query.get(trek_id)
+    trek = db.session.get(Trek, trek_id)
     if not trek:
         return jsonify({"status": "error", "message": "Trek not found"}), 404
 
@@ -225,6 +265,19 @@ def update_trek_status(trek_id):
     if new_status not in VALID_STATUSES:
         return jsonify({"status": "error", "message": f"Invalid status. Must be one of: {list(VALID_STATUSES)}"}), 400
 
+    # Date and status business guards
+    if new_status == "Completed" and trek.start_date > date.today():
+        return jsonify({"status": "error", "message": "Cannot mark trek as completed before its start date"}), 400
+
+    if new_status == "Open" and trek.end_date < date.today():
+        return jsonify({"status": "error", "message": "Cannot open a trek whose end date has passed"}), 400
+
+    # Cascade: auto-complete active bookings when trek completes
+    if new_status == "Completed" and trek.status != "Completed":
+        active_bookings = Booking.query.filter_by(trek_id=trek.id, status="Booked").all()
+        for b in active_bookings:
+            b.status = "Completed"
+
     trek.status = new_status
     db.session.commit()
     invalidate_trek_cache()
@@ -239,12 +292,12 @@ def update_trek_status(trek_id):
 @treks_bp.route("/<int:trek_id>", methods=["DELETE"])
 @admin_required
 def delete_trek(trek_id):
-    trek = Trek.query.get(trek_id)
+    trek = db.session.get(Trek, trek_id)
     if not trek:
         return jsonify({"status": "error", "message": "Trek not found"}), 404
 
     # Prevent deleting a trek that has active bookings
-    active_booking = Booking.query.filter_by(trek_id=trek.id, status="confirmed").first()
+    active_booking = Booking.query.filter_by(trek_id=trek.id, status="Booked").first()
     if active_booking:
         return jsonify({
             "status": "error",
