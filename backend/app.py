@@ -3,6 +3,7 @@ from flask import Flask, jsonify
 from backend.config import Config
 from backend.extensions import db, jwt, cors, cache
 import backend.models # execute init.py to register models
+from backend.routes.auth import auth_bp
 
 def create_app(config_class=Config):
     app = Flask(__name__) # flask app instance 
@@ -18,6 +19,9 @@ def create_app(config_class=Config):
     jwt.init_app(app)
     cors.init_app(app, resources={r"/api/*": {"origins": "*"}})
     cache.init_app(app)
+
+    # Register Blueprints
+    app.register_blueprint(auth_bp)
 
     # Health check route
     @app.route("/api/health", methods=["GET"])

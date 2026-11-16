@@ -4,8 +4,8 @@ from datetime import timedelta
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Config:
-    SECRET_KEY = os.getenv("SECRET_KEY", "trekk-secret-key-mad2-2026")
-    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "trekk-jwt-secret-key-2026")
+    SECRET_KEY = os.getenv("SECRET_KEY", "trekk-secret-key-mad2-2026-production-ready")
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "trekk-jwt-super-secret-key-mad2-2026-secure")
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=1)
     
     # Programmatic SQLite database path
