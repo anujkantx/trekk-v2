@@ -23,6 +23,7 @@ class Config:
     CACHE_TYPE = os.getenv("CACHE_TYPE", "RedisCache")
     CACHE_REDIS_URL = REDIS_URL
     CACHE_DEFAULT_TIMEOUT = 300
+    CACHE_IGNORE_ERRORS = True
 
     # Celery (picked by celery worker configuration)
     CELERY_BROKER_URL = REDIS_URL
