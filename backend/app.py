@@ -5,6 +5,7 @@ from backend.extensions import db, jwt, cors, cache
 import backend.models
 from backend.routes.auth import auth_bp
 from backend.routes.treks import treks_bp
+from backend.routes.bookings import bookings_bp
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -24,6 +25,7 @@ def create_app(config_class=Config):
     # Register Blueprints
     app.register_blueprint(auth_bp)
     app.register_blueprint(treks_bp)
+    app.register_blueprint(bookings_bp)
 
     @app.route("/api/health", methods=["GET"])
     def health_check():
