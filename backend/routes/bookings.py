@@ -105,17 +105,22 @@ def cancel_booking(booking_id):
     if not booking:
         return jsonify({"status": "error", "message": "Booking not found"}), 404
 
-    # Users can only cancel their own booking (Admin can cancel any)
-    if booking.user_id != user_id and current_role != "admin":
-        return jsonify({"status": "error", "message": "You can only cancel your own bookings"}), 403
+    trek = booking.trek
+
+    # Only booking owner, admin, or assigned staff can cancel
+    is_owner = (booking.user_id == user_id)
+    is_admin = (current_role == "admin")
+    is_assigned_staff = (current_role == "staff" and trek.assigned_staff_id == user_id)
+
+    if not (is_owner or is_admin or is_assigned_staff):
+        return jsonify({"status": "error", "message": "You do not have permission to cancel this booking"}), 403
 
     if booking.status == "Cancelled":
         return jsonify({"status": "error", "message": "Booking is already cancelled"}), 400
 
-    trek = booking.trek
-    # Cannot cancel if trek has already started
+    # Cannot cancel if trek has already started or passed
     if trek.start_date <= date.today():
-        return jsonify({"status": "error", "message": "Cannot cancel booking for a trek that has already started"}), 400
+        return jsonify({"status": "error", "message": "Cannot cancel booking for a trek that has already started or passed"}), 400
 
     # Rollback slots and update booking status
     booking.status = "Cancelled"
