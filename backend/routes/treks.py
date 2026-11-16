@@ -1,4 +1,3 @@
-from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import verify_jwt_in_request, get_jwt, get_jwt_identity
 from backend.extensions import db, cache
@@ -11,12 +10,6 @@ treks_bp = Blueprint("treks", __name__, url_prefix="/api/treks")
 
 VALID_DIFFICULTIES = {"Easy", "Moderate", "Hard"}
 VALID_STATUSES = {"Pending", "Approved", "Open", "Closed", "Completed"}
-
-def parse_date(date_str):
-    try:
-        return datetime.strptime(date_str, "%Y-%m-%d").date()
-    except (ValueError, TypeError):
-        return None
 
 def invalidate_trek_cache():
     try:
@@ -119,63 +112,28 @@ def get_trek(trek_id):
 @admin_required
 def create_trek():
     data = request.get_json()
-    if not data:
-        return jsonify({"status": "error", "message": "JSON body is required"}), 400
+    is_valid, error, cleaned = Trek.validate_data(data)
+    if not is_valid:
+        return jsonify({"status": "error", "message": error}), 400
 
-    name = data.get("name", "").strip()
-    location = data.get("location", "").strip()
-    difficulty = data.get("difficulty", "Moderate").strip().capitalize()
-    duration_days = data.get("duration_days", 1)
-    total_slots = data.get("total_slots")
-    price = data.get("price", 0.0)
-    description = data.get("description", "").strip() or None
-    start_date_raw = data.get("start_date")
-    end_date_raw = data.get("end_date")
     assigned_staff_id = data.get("assigned_staff_id")
-
-    # Validations
-    if not name or not location:
-        return jsonify({"status": "error", "message": "Name and location are required"}), 400
-
-    if difficulty not in VALID_DIFFICULTIES:
-        return jsonify({"status": "error", "message": f"Difficulty must be one of: {list(VALID_DIFFICULTIES)}"}), 400
-
-    if not isinstance(total_slots, int) or total_slots <= 0:
-        return jsonify({"status": "error", "message": "total_slots must be a positive integer"}), 400
-
-    try:
-        price = float(price)
-        if price < 0:
-            raise ValueError()
-    except (ValueError, TypeError):
-        return jsonify({"status": "error", "message": "price must be a non-negative number"}), 400
-
-    start_date = parse_date(start_date_raw)
-    end_date = parse_date(end_date_raw)
-    if not start_date or not end_date:
-        return jsonify({"status": "error", "message": "Valid start_date and end_date (YYYY-MM-DD) are required"}), 400
-
-    if start_date > end_date:
-        return jsonify({"status": "error", "message": "start_date cannot be after end_date"}), 400
-
-    # Validate assigned staff
     if assigned_staff_id:
         staff_user = User.query.get(assigned_staff_id)
         if not staff_user or staff_user.role != "staff":
             return jsonify({"status": "error", "message": "Assigned user must exist and have the 'staff' role"}), 400
 
     new_trek = Trek(
-        name=name,
-        location=location,
-        difficulty=difficulty,
-        duration_days=duration_days,
-        total_slots=total_slots,
-        available_slots=total_slots,
-        price=price,
-        description=description,
-        status="Open",
-        start_date=start_date,
-        end_date=end_date,
+        name=cleaned["name"],
+        location=cleaned["location"],
+        difficulty=cleaned["difficulty"],
+        duration_days=cleaned["duration_days"],
+        total_slots=cleaned["total_slots"],
+        available_slots=cleaned["available_slots"],
+        price=cleaned["price"],
+        description=cleaned["description"],
+        status=cleaned["status"],
+        start_date=cleaned["start_date"],
+        end_date=cleaned["end_date"],
         assigned_staff_id=assigned_staff_id
     )
 
@@ -207,49 +165,12 @@ def update_trek(trek_id):
 
     data = request.get_json() or {}
 
-    if "name" in data and data["name"].strip():
-        trek.name = data["name"].strip()
-    if "location" in data and data["location"].strip():
-        trek.location = data["location"].strip()
-    if "difficulty" in data and data["difficulty"].strip().capitalize() in VALID_DIFFICULTIES:
-        trek.difficulty = data["difficulty"].strip().capitalize()
-    if "duration_days" in data and isinstance(data["duration_days"], int) and data["duration_days"] > 0:
-        trek.duration_days = data["duration_days"]
-    if "description" in data:
-        trek.description = data["description"].strip() if data["description"] else None
+    # Validate merged state using reusable model validator
+    is_valid, error, cleaned = Trek.validate_data(data, existing_trek=trek)
+    if not is_valid:
+        return jsonify({"status": "error", "message": error}), 400
 
-    if "price" in data:
-        try:
-            val = float(data["price"])
-            if val >= 0:
-                trek.price = val
-        except (ValueError, TypeError):
-            pass
-
-    if "start_date" in data:
-        parsed_start = parse_date(data["start_date"])
-        if parsed_start:
-            trek.start_date = parsed_start
-
-    if "end_date" in data:
-        parsed_end = parse_date(data["end_date"])
-        if parsed_end:
-            trek.end_date = parsed_end
-
-    # Slot update validation
-    if "total_slots" in data:
-        new_total = data["total_slots"]
-        if isinstance(new_total, int) and new_total > 0:
-            booked_slots = trek.total_slots - trek.available_slots
-            if new_total < booked_slots:
-                return jsonify({
-                    "status": "error",
-                    "message": f"Cannot reduce total slots below existing booked count ({booked_slots})"
-                }), 400
-            trek.available_slots = new_total - booked_slots
-            trek.total_slots = new_total
-
-    # Staff assignment (admin only)
+    # Staff assignment check (admin only)
     if "assigned_staff_id" in data and current_role == "admin":
         staff_id = data["assigned_staff_id"]
         if staff_id:
@@ -259,6 +180,19 @@ def update_trek(trek_id):
             trek.assigned_staff_id = staff_id
         else:
             trek.assigned_staff_id = None
+
+    # Apply validated changes (including status and dates safely)
+    trek.name = cleaned["name"]
+    trek.location = cleaned["location"]
+    trek.difficulty = cleaned["difficulty"]
+    trek.duration_days = cleaned["duration_days"]
+    trek.total_slots = cleaned["total_slots"]
+    trek.available_slots = cleaned["available_slots"]
+    trek.price = cleaned["price"]
+    trek.description = cleaned["description"]
+    trek.status = cleaned["status"]
+    trek.start_date = cleaned["start_date"]
+    trek.end_date = cleaned["end_date"]
 
     db.session.commit()
     invalidate_trek_cache()
