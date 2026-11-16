@@ -5,6 +5,8 @@ docs/
 
 # agent
 .agents/
+GEMINI.md
+AGENTS.md
 
 # notes
 notes/
