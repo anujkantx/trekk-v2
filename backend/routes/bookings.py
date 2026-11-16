@@ -32,7 +32,7 @@ def create_booking():
     if not isinstance(num_slots, int) or num_slots <= 0:
         return jsonify({"status": "error", "message": "num_slots must be a positive integer"}), 400
 
-    trek = Trek.query.get(trek_id)
+    trek = db.session.get(Trek, trek_id)
     if not trek:
         return jsonify({"status": "error", "message": "Trek not found"}), 404
 
@@ -61,8 +61,6 @@ def create_booking():
 
     # Deduct slots atomically in database transaction
     trek.available_slots -= num_slots
-    if trek.available_slots == 0:
-        trek.status = "Closed"
 
     new_booking = Booking(
         user_id=user_id,
@@ -103,7 +101,7 @@ def cancel_booking(booking_id):
     claims = get_jwt()
     current_role = claims.get("role")
 
-    booking = Booking.query.get(booking_id)
+    booking = db.session.get(Booking, booking_id)
     if not booking:
         return jsonify({"status": "error", "message": "Booking not found"}), 404
 
@@ -123,10 +121,6 @@ def cancel_booking(booking_id):
     booking.status = "Cancelled"
     trek.available_slots += booking.num_slots
 
-    # Reopen trek if it was closed due to full capacity
-    if trek.status == "Closed" and trek.available_slots > 0 and trek.end_date >= date.today():
-        trek.status = "Open"
-
     db.session.commit()
     invalidate_cache()
 
@@ -144,7 +138,7 @@ def get_trek_participants(trek_id):
     claims = get_jwt()
     current_role = claims.get("role")
 
-    trek = Trek.query.get(trek_id)
+    trek = db.session.get(Trek, trek_id)
     if not trek:
         return jsonify({"status": "error", "message": "Trek not found"}), 404
 
