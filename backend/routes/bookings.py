@@ -34,7 +34,8 @@ def create_booking():
     if not isinstance(num_slots, int) or num_slots <= 0:
         return jsonify({"status": "error", "message": "num_slots must be a positive integer"}), 400
 
-    trek = db.session.get(Trek, trek_id)
+    # Lock row to prevent race conditions during concurrent bookings
+    trek = db.session.query(Trek).filter_by(id=trek_id).with_for_update().first()
     if not trek:
         return jsonify({"status": "error", "message": "Trek not found"}), 404
 

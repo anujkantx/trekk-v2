@@ -25,6 +25,12 @@ class Trek(db.Model):
     assigned_staff = db.relationship("User", back_populates="assigned_treks")
     bookings = db.relationship("Booking", back_populates="trek", cascade="all, delete-orphan")
 
+    # DB constraints to guarantee non-negative inventory and prevent overbooking
+    __table_args__ = (
+        db.CheckConstraint("available_slots >= 0", name="check_min_available_slots"),
+        db.CheckConstraint("total_slots >= available_slots", name="check_slots_capacity"),
+    )
+
     def __init__(self, name, location, difficulty="Moderate", duration_days=1, total_slots=20, 
                  available_slots=20, price=0.0, description=None, status="Pending", 
                  start_date=None, end_date=None, assigned_staff_id=None):
