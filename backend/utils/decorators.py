@@ -1,6 +1,7 @@
 from functools import wraps
 from flask import jsonify
-from flask_jwt_extended import verify_jwt_in_request, get_jwt, get_jwt_identity
+from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+from backend.extensions import db
 from backend.models.user import User
 
 def role_required(*allowed_roles):
@@ -8,10 +9,19 @@ def role_required(*allowed_roles):
         @wraps(fn)
         def decorator(*args, **kwargs):
             verify_jwt_in_request()
-            claims = get_jwt()
-            user_role = claims.get("role")
+            user_id = int(get_jwt_identity())
+            user = db.session.get(User, user_id)
+            if not user:
+                return jsonify({"status": "error", "message": "User not found"}), 401
 
-            if user_role not in allowed_roles:
+            # Check DB status to catch mid-session blacklisting
+            if user.status != "active":
+                return jsonify({
+                    "status": "error",
+                    "message": "Account has been deactivated or blacklisted by administrator"
+                }), 403
+
+            if user.role not in allowed_roles:
                 return jsonify({
                     "status": "error",
                     "message": f"Access restricted. Required roles: {list(allowed_roles)}"
@@ -38,8 +48,8 @@ def active_user_required(fn=None):
         @wraps(func)
         def decorator(*args, **kwargs):
             verify_jwt_in_request()
-            user_id = get_jwt_identity()
-            user = User.query.get(user_id)
+            user_id = int(get_jwt_identity())
+            user = db.session.get(User, user_id)
             if not user:
                 return jsonify({"status": "error", "message": "User not found"}), 401
 
