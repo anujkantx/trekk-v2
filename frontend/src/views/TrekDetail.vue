@@ -20,12 +20,11 @@
       <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ errorMessage }}
     </div>
 
-    <!-- Main Trek Detail Content -->
-    <div v-else-if="trek" class="row g-4">
-      <!-- Left Column: Comprehensive Expedition Details -->
-      <div class="col-lg-8">
+    <!-- Main Trek Detail Content: Unified Single Card -->
+    <div v-else-if="trek" class="row justify-content-center">
+      <div class="col-12 col-lg-10 col-xl-9">
         <div
-          class="card trek-card border-0 shadow-sm p-4 mb-4"
+          class="card trek-card border-0 shadow-sm p-3 p-md-4 mb-4"
           :class="{
             'trek-card-easy': trek.difficulty === 'Easy',
             'trek-card-moderate': trek.difficulty === 'Moderate',
@@ -96,134 +95,89 @@
 
           <hr class="my-4 opacity-25" />
 
-          <!-- Included Highlights Box -->
-          <h5 class="fw-bold text-dark mb-3">
-            <i class="bi bi-check-circle-fill text-success me-2"></i>What's Included in This Trek
-          </h5>
-          <div class="row g-3">
-            <div class="col-md-6">
-              <div class="d-flex align-items-center p-2 rounded bg-light">
-                <i class="bi bi-shield-check text-success fs-5 me-2"></i>
-                <span class="small fw-semibold text-dark">Forest Permits & Entry Fees</span>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="d-flex align-items-center p-2 rounded bg-light">
-                <i class="bi bi-person-badge text-primary fs-5 me-2"></i>
-                <span class="small fw-semibold text-dark">
-                  Certified Mountain Guide {{ trek.assigned_staff_name ? '(' + trek.assigned_staff_name + ')' : '' }}
-                </span>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="d-flex align-items-center p-2 rounded bg-light">
-                <i class="bi bi-heart-pulse text-danger fs-5 me-2"></i>
-                <span class="small fw-semibold text-dark">First Aid & Emergency Support</span>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="d-flex align-items-center p-2 rounded bg-light">
-                <i class="bi bi-cup-hot text-warning fs-5 me-2"></i>
-                <span class="small fw-semibold text-dark">Meals & Campsite Accommodation</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Right Column: Sticky Booking Widget -->
-      <div class="col-lg-4">
-        <div class="card border-0 shadow-sm p-4 sticky-top" style="top: 80px;">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="fw-bold mb-0">Reserve Spot</h4>
-            <span v-if="trek.available_slots <= 5 && trek.available_slots > 0" class="badge bg-warning-subtle text-warning-emphasis border">
-              Limited Seats
-            </span>
-          </div>
-
-          <!-- Price Display -->
-          <div class="bg-light p-3 rounded-3 mb-4">
-            <span class="text-muted small d-block">Price per trekker</span>
-            <span class="fs-2 fw-bold text-primary">₹{{ trek.price.toLocaleString('en-IN') }}</span>
-            <span class="text-muted small d-block mt-1">All taxes & permits included</span>
-          </div>
-
-          <!-- Alerts -->
-          <div v-if="bookingAlert.message" :class="`alert alert-${bookingAlert.type} py-2 small mb-3`">
-            <i :class="bookingAlert.type === 'success' ? 'bi bi-check-circle-fill' : 'bi bi-exclamation-triangle-fill'" class="me-1"></i>
-            {{ bookingAlert.message }}
-          </div>
-
-          <!-- If Not Logged In -->
-          <div v-if="!isLoggedIn" class="text-center py-4 border rounded-3 bg-light mb-3">
-            <i class="bi bi-lock-fill text-muted fs-3 d-block mb-2"></i>
-            <p class="small text-muted mb-3">You need to sign in with your trekker account to reserve slots.</p>
-            <router-link :to="`/login?redirect=/treks/${trek.id}`" class="btn btn-primary btn-sm px-4 fw-semibold">
-              Sign In to Book
-            </router-link>
-          </div>
-
-          <!-- If Logged in as Admin or Staff -->
-          <div v-else-if="userRole !== 'user'" class="alert alert-info small mb-3">
-            <i class="bi bi-info-circle me-1"></i>
-            You are signed in as <strong>{{ userRole }}</strong>. Expeditions can only be booked by trekker accounts. Manage this trek from your dashboard.
-          </div>
-
-          <!-- If Sold Out -->
-          <div v-else-if="trek.available_slots === 0" class="alert alert-danger text-center small mb-3">
-            <i class="bi bi-x-circle-fill me-1"></i> All slots for this expedition are completely booked.
-          </div>
-
-          <!-- Booking Form for Trekker -->
-          <form v-else @submit.prevent="handleBooking">
-            <div class="mb-3">
-              <label class="form-label small fw-semibold">Select Number of Slots</label>
-              <select v-model.number="slotsToBook" class="form-select">
-                <option v-for="n in maxSelectableSlots" :key="n" :value="n">
-                  {{ n }} {{ n === 1 ? 'Slot' : 'Slots' }} (₹{{ (n * trek.price).toLocaleString('en-IN') }})
-                </option>
-              </select>
+          <!-- Integrated Reservation Section -->
+          <div class="bg-light p-3 p-md-4 rounded-3 border">
+            <!-- Alerts -->
+            <div v-if="bookingAlert.message" :class="`alert alert-${bookingAlert.type} py-2 small mb-3`">
+              <i :class="bookingAlert.type === 'success' ? 'bi bi-check-circle-fill' : 'bi bi-exclamation-triangle-fill'" class="me-1"></i>
+              {{ bookingAlert.message }}
             </div>
 
-            <!-- Price Breakdown Box -->
-            <div class="p-3 bg-light rounded-3 mb-3 small">
-              <div class="d-flex justify-content-between text-muted mb-1">
-                <span>Base Fare ({{ slotsToBook }} x ₹{{ trek.price.toLocaleString('en-IN') }})</span>
-                <span>₹{{ (slotsToBook * trek.price).toLocaleString('en-IN') }}</span>
+            <!-- If Not Logged In -->
+            <div v-if="!isLoggedIn" class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+              <div>
+                <span class="text-muted small d-block">Price per trekker</span>
+                <span class="fs-2 fw-bold text-primary">₹{{ trek.price.toLocaleString('en-IN') }}</span>
               </div>
-              <div class="d-flex justify-content-between text-muted mb-2">
-                <span>Permits & Insurance</span>
-                <span class="text-success fw-semibold">Free</span>
-              </div>
-              <hr class="my-1 opacity-25" />
-              <div class="d-flex justify-content-between align-items-center pt-1">
-                <span class="fw-bold text-dark">Total Amount:</span>
-                <span class="fs-4 fw-bold text-success">
-                  ₹{{ (slotsToBook * trek.price).toLocaleString('en-IN') }}
-                </span>
+              <div>
+                <router-link
+                  :to="`/login?redirect=/treks/${trek.id}`"
+                  class="btn btn-primary px-4 py-2 fw-semibold shadow-sm w-100"
+                >
+                  Sign In to Book
+                </router-link>
               </div>
             </div>
 
-            <button
-              type="submit"
-              class="btn btn-primary w-100 py-2 fw-semibold shadow-sm"
-              :disabled="bookingLoading"
-            >
-              <span v-if="bookingLoading" class="spinner-border spinner-border-sm me-2"></span>
-              <span>{{ bookingLoading ? 'Reserving...' : 'Confirm Reservation' }}</span>
-            </button>
-          </form>
+            <!-- If Logged in as Admin or Staff -->
+            <div v-else-if="userRole !== 'user'" class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+              <div>
+                <span class="text-muted small d-block">Price per trekker</span>
+                <span class="fs-2 fw-bold text-primary">₹{{ trek.price.toLocaleString('en-IN') }}</span>
+              </div>
+              <div class="alert alert-info small mb-0">
+                <i class="bi bi-info-circle me-1"></i>
+                Signed in as <strong>{{ userRole }}</strong>. Bookings are reserved for trekkers.
+              </div>
+            </div>
 
-          <!-- Security & Guarantee Notices -->
-          <div class="mt-3 pt-3 border-top small text-muted">
-            <div class="d-flex align-items-center mb-1">
-              <i class="bi bi-shield-check text-success me-2"></i>
-              <span>Free cancellation before start date</span>
+            <!-- If Sold Out -->
+            <div v-else-if="trek.available_slots === 0" class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+              <div>
+                <span class="text-muted small d-block">Price per trekker</span>
+                <span class="fs-2 fw-bold text-primary">₹{{ trek.price.toLocaleString('en-IN') }}</span>
+              </div>
+              <div class="alert alert-danger text-center small mb-0">
+                <i class="bi bi-x-circle-fill me-1"></i> This trek is completely sold out.
+              </div>
             </div>
-            <div class="d-flex align-items-center">
-              <i class="bi bi-lightning-charge-fill text-warning me-2"></i>
-              <span>Instant slot reservation & confirmation</span>
-            </div>
+
+            <!-- Booking Form for Trekker -->
+            <form v-else @submit.prevent="handleBooking">
+              <div class="row align-items-center g-3">
+                <div class="col-12 col-md-4">
+                  <span class="text-muted small d-block">Price per trekker</span>
+                  <span class="fs-2 fw-bold text-primary">₹{{ trek.price.toLocaleString('en-IN') }}</span>
+                </div>
+
+                <div class="col-12 col-sm-6 col-md-4">
+                  <label class="form-label small fw-semibold text-muted mb-1">Select Slots</label>
+                  <select v-model.number="slotsToBook" class="form-select">
+                    <option v-for="n in maxSelectableSlots" :key="n" :value="n">
+                      {{ n }} {{ n === 1 ? 'Slot' : 'Slots' }} (₹{{ (n * trek.price).toLocaleString('en-IN') }})
+                    </option>
+                  </select>
+                </div>
+
+                <div class="col-12 col-sm-6 col-md-4">
+                  <label class="form-label small fw-semibold text-muted mb-1">Total Payable</label>
+                  <div class="fs-3 fw-bold text-success mb-0">
+                    ₹{{ (slotsToBook * trek.price).toLocaleString('en-IN') }}
+                  </div>
+                </div>
+
+                <div class="col-12 mt-3">
+                  <button
+                    type="submit"
+                    class="btn btn-primary w-100 py-2 fw-semibold shadow-sm"
+                    :disabled="bookingLoading"
+                  >
+                    <span v-if="bookingLoading" class="spinner-border spinner-border-sm me-2"></span>
+                    <span>{{ bookingLoading ? 'Reserving...' : 'Confirm Reservation' }}</span>
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
       </div>
