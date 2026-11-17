@@ -1,7 +1,7 @@
 import re # RegEx module
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
-from backend.extensions import db
+from backend.extensions import db, cache
 from backend.models.user import User
 from backend.utils.decorators import active_user_required
 
@@ -46,6 +46,10 @@ def register():
 
     db.session.add(new_user)
     db.session.commit()
+    try:
+        cache.clear()
+    except Exception:
+        pass
 
     return jsonify({
         "status": "success",

@@ -18,7 +18,42 @@ def invalidate_trek_cache():
     except Exception:
         pass
 
+def make_treks_cache_key(*args, **kwargs):
+    scope = "public"
+    try:
+        verify_jwt_in_request(optional=True)
+        identity = get_jwt_identity()
+        if identity:
+            user = db.session.get(User, int(identity))
+            if user and user.status == "active":
+                if user.role == "admin":
+                    scope = "admin"
+                elif user.role == "staff":
+                    view = request.args.get("view", "assigned").strip().lower()
+                    scope = "public" if view == "all" else f"staff_{user.id}"
+    except Exception:
+        pass
+    query_string = request.query_string.decode("utf-8")
+    return f"treks_list:{request.path}?{query_string}&_scope={scope}"
+
+def make_trek_detail_cache_key(*args, **kwargs):
+    scope = "public"
+    try:
+        verify_jwt_in_request(optional=True)
+        identity = get_jwt_identity()
+        if identity:
+            user = db.session.get(User, int(identity))
+            if user and user.status == "active":
+                if user.role == "admin":
+                    scope = "admin"
+                elif user.role == "staff":
+                    scope = f"staff_{user.id}"
+    except Exception:
+        pass
+    return f"trek_detail:{request.path}&_scope={scope}"
+
 @treks_bp.route("", methods=["GET"])
+@cache.cached(timeout=300, make_cache_key=make_treks_cache_key)
 def get_treks():
     query = Trek.query
 
@@ -95,6 +130,7 @@ def get_treks():
 
 
 @treks_bp.route("/<int:trek_id>", methods=["GET"])
+@cache.cached(timeout=300, make_cache_key=make_trek_detail_cache_key)
 def get_trek(trek_id):
     trek = db.session.get(Trek, trek_id)
     if not trek:

@@ -123,6 +123,7 @@ def toggle_user_status(user_id):
 
 @admin_bp.route("/dashboard-stats", methods=["GET"])
 @admin_required
+@cache.cached(timeout=60, key_prefix="admin_dashboard_stats")
 def get_dashboard_stats():
     # User counts
     total_trekkers = User.query.filter_by(role="user").count()
