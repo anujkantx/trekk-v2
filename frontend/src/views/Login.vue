@@ -5,7 +5,7 @@
         <div class="card shadow-sm border-0">
           <div class="card-body p-4 p-md-5">
             <div class="text-center mb-4">
-              <i class="bi bi-compass text-warning display-4"></i>
+              <i class="bi bi-backpack2-fill text-primary display-4"></i>
               <h2 class="fw-bold mt-2">Welcome Back</h2>
               <p class="text-muted small">Sign in to manage your treks and bookings</p>
             </div>

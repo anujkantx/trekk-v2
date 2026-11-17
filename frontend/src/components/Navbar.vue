@@ -1,8 +1,8 @@
 <template>
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm">
+  <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top">
     <div class="container">
-      <router-link to="/" class="navbar-brand fw-bold d-flex align-items-center">
-        <i class="bi bi-compass me-2 text-warning fs-4"></i>
+      <router-link to="/" class="navbar-brand fw-bold d-flex align-items-center text-dark" title="Explore Treks">
+        <i class="bi bi-backpack2-fill me-2 text-primary fs-4"></i>
         <span>TrekManagement</span>
       </router-link>
 
@@ -17,23 +17,18 @@
 
       <div class="collapse navbar-collapse" id="navbarContent">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-          <li class="nav-item">
-            <router-link to="/" class="nav-link" active-class="active">
-              <i class="bi bi-compass-fill me-1"></i> Explore Treks
-            </router-link>
-          </li>
           <li v-if="user && user.role === 'user'" class="nav-item">
-            <router-link to="/my-bookings" class="nav-link" active-class="active">
+            <router-link to="/my-bookings" class="nav-link text-secondary" active-class="active fw-semibold text-primary">
               <i class="bi bi-bookmark-check-fill me-1"></i> My Bookings
             </router-link>
           </li>
           <li v-if="user && user.role === 'staff'" class="nav-item">
-            <router-link to="/staff" class="nav-link" active-class="active">
+            <router-link to="/staff" class="nav-link text-secondary" active-class="active fw-semibold text-primary">
               <i class="bi bi-clipboard2-check-fill me-1"></i> Staff Portal
             </router-link>
           </li>
           <li v-if="user && user.role === 'admin'" class="nav-item">
-            <router-link to="/admin" class="nav-link" active-class="active">
+            <router-link to="/admin" class="nav-link text-secondary" active-class="active fw-semibold text-primary">
               <i class="bi bi-speedometer2 me-1"></i> Admin Panel
             </router-link>
           </li>
@@ -41,18 +36,18 @@
 
         <div class="d-flex align-items-center">
           <template v-if="user">
-            <span class="badge bg-secondary me-3 px-3 py-2 text-capitalize">
-              <i class="bi bi-person-circle me-1"></i> {{ user.username }} ({{ user.role }})
+            <span class="badge bg-light text-dark border me-3 px-3 py-2 text-capitalize">
+              <i class="bi bi-person-circle me-1 text-primary"></i> {{ user.username }} ({{ user.role }})
             </span>
-            <button @click="logout" class="btn btn-outline-light btn-sm">
+            <button @click="logout" class="btn btn-outline-danger btn-sm">
               <i class="bi bi-box-arrow-right me-1"></i> Logout
             </button>
           </template>
           <template v-else>
-            <router-link to="/login" class="btn btn-outline-light btn-sm me-2">
+            <router-link to="/login" class="btn btn-outline-primary btn-sm me-2">
               <i class="bi bi-box-arrow-in-right me-1"></i> Login
             </router-link>
-            <router-link to="/register" class="btn btn-warning btn-sm text-dark fw-semibold">
+            <router-link to="/register" class="btn btn-primary btn-sm fw-semibold">
               <i class="bi bi-person-plus me-1"></i> Register
             </router-link>
           </template>

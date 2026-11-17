@@ -1,5 +1,6 @@
 body {
-  background-color: #f8f9fa;
+  background-color: #ffffff83;
+  color: #1e293b;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -11,22 +12,211 @@ body {
   min-height: 100vh;
 }
 
-.card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+/* Brand logo styling */
+.navbar-brand {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.navbar-brand:hover {
+  opacity: 0.85;
+  transform: scale(1.01);
+}
+
+/* Headings and text contrast */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.h1,
+.h2,
+.h3,
+.h4,
+.h5,
+.h6 {
+  color: #0f172a;
+}
+
+.text-muted {
+  color: #64748b !important;
+}
+
+.text-secondary {
+  color: #475569 !important;
+}
+
+/* Cards visibility on white background */
+.card,
+.card.border-0 {
+  border: 1px solid #e2e8f0 !important;
+  background-color: #b4b7d057;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .card:hover {
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.08);
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04) !important;
+}
+
+.card-header {
+  background-color: #f8fafc !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  color: #0f172a;
+}
+
+.card-footer {
+  background-color: #f8fafc !important;
+  border-top: 1px solid #e2e8f0 !important;
+}
+
+/* Form controls and input visibility */
+.form-control,
+.form-select {
+  border-color: #cbd5e1;
+  color: #0f172a;
+  background-color: #ffffff;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.15);
+  color: #0f172a;
+}
+
+.form-control::placeholder {
+  color: #94a3b8;
+}
+
+.input-group-text {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #475569 !important;
+}
+
+/* Table visibility */
+.table {
+  border-color: #e2e8f0;
+  color: #1e293b;
+}
+
+.table> :not(caption)>*>* {
+  border-bottom-color: #e2e8f0;
+}
+
+.table thead th,
+.table-light th {
+  background-color: #f8fafc !important;
+  color: #334155 !important;
+  border-bottom: 2px solid #cbd5e1 !important;
+  font-weight: 600;
+}
+
+.table-hover>tbody>tr:hover>* {
+  background-color: #f8fafc;
+}
+
+/* Badges */
+.badge {
+  font-weight: 600;
 }
 
 .badge-easy {
-  background-color: #198754;
+  background-color: #059669;
+  color: #ffffff;
 }
 
 .badge-moderate {
-  background-color: #fd7e14;
+  background-color: #d97706;
+  color: #ffffff;
 }
 
 .badge-hard {
-  background-color: #dc3545;
+  background-color: #dc2626;
+  color: #ffffff;
+}
+
+.bg-success-subtle {
+  background-color: #ecfdf5 !important;
+  color: #065f46 !important;
+  border: 1px solid #a7f3d0 !important;
+}
+
+.bg-danger-subtle {
+  background-color: #fef2f2 !important;
+  color: #991b1b !important;
+  border: 1px solid #fecaca !important;
+}
+
+.bg-warning-subtle {
+  background-color: #fffbeb !important;
+  color: #92400e !important;
+  border: 1px solid #fde68a !important;
+}
+
+.bg-info-subtle {
+  background-color: #f0f9ff !important;
+  color: #075985 !important;
+  border: 1px solid #bae6fd !important;
+}
+
+/* Buttons */
+.btn-primary {
+  background-color: #2563eb;
+  border-color: #2563eb;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.btn-outline-primary {
+  color: #2563eb;
+  border-color: #2563eb;
+}
+
+.btn-outline-primary:hover {
+  background-color: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+.btn-outline-secondary {
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+.btn-outline-secondary:hover {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+/* Trek Card Enhancements */
+.trek-card {
+  border-top-width: 4px !important;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.2s ease;
+}
+
+.trek-card:hover {
+  transform: translateY(-4px);
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 12px 24px -4px rgba(15, 23, 42, 0.1), 0 4px 6px -2px rgba(15, 23, 42, 0.05) !important;
+}
+
+.trek-card-easy {
+  border-top-color: #059669 !important;
+}
+
+.trek-card-moderate {
+  border-top-color: #d97706 !important;
+}
+
+.trek-card-hard {
+  border-top-color: #dc2626 !important;
 }

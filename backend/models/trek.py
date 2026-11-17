@@ -92,7 +92,7 @@ class Trek(db.Model):
         name = data.get("name", existing_trek.name if existing_trek else "").strip()
         location = data.get("location", existing_trek.location if existing_trek else "").strip()
         difficulty = data.get("difficulty", existing_trek.difficulty if existing_trek else "Moderate").strip().capitalize()
-        duration_days = data.get("duration_days", existing_trek.duration_days if existing_trek else 1)
+        duration_days_raw = data.get("duration_days")
         description = data.get("description", existing_trek.description if existing_trek else None)
         status = data.get("status", existing_trek.status if existing_trek else "Open").strip().capitalize()
 
@@ -136,6 +136,15 @@ class Trek(db.Model):
         valid_statuses = {"Pending", "Approved", "Open", "Closed", "Completed"}
         if status not in valid_statuses:
             return False, f"Status must be one of: {list(valid_statuses)}", None
+
+        if duration_days_raw is not None:
+            duration_days = duration_days_raw
+        elif existing_trek and existing_trek.duration_days:
+            duration_days = existing_trek.duration_days
+        elif (end_date - start_date).days > 0:
+            duration_days = (end_date - start_date).days
+        else:
+            duration_days = 1
 
         if not isinstance(duration_days, int) or duration_days <= 0:
             return False, "duration_days must be a positive integer", None

@@ -275,6 +275,7 @@ def seed_sample_treks(users):
                 description=data["description"],
                 location=data["location"],
                 difficulty=data["difficulty"],
+                duration_days=(data["end_date"] - data["start_date"]).days,
                 start_date=data["start_date"],
                 end_date=data["end_date"],
                 total_slots=data["total_slots"],
