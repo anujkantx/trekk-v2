@@ -3,10 +3,7 @@
     <!-- Header -->
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
       <div>
-        <h2 class="fw-bold mb-1">
-          <i class="bi bi-person-circle text-primary me-2"></i>My Trekker Dashboard
-        </h2>
-        <p class="text-muted small mb-0">Manage your adventure reservations and booking history</p>
+        <h2 class="fw-bold mb-0">Trekker Dashboard</h2>
       </div>
       <div>
         <button
