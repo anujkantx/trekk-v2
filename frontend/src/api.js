@@ -10,7 +10,7 @@ const api = axios.create({
 // Attach JWT token from localStorage to every outgoing request
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token')
+    const token = authState.getToken()
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -19,13 +19,12 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-// Intercept 401s to auto-logout expired sessions
+// Intercept 401s / 422s to auto-logout expired/corrupted sessions
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
+    if (error.response && (error.response.status === 401 || error.response.status === 422)) {
+      authState.clearAuth()
       if (window.location.pathname !== '/login') {
         window.location.href = '/login'
       }
@@ -36,7 +35,8 @@ api.interceptors.response.use(
 
 export const authState = {
   getToken() {
-    return localStorage.getItem('token')
+    const token = localStorage.getItem('token')
+    return (token && token !== 'undefined' && token !== 'null') ? token : null
   },
   getUser() {
     const userStr = localStorage.getItem('user')
@@ -54,8 +54,16 @@ export const authState = {
     return !!this.getToken()
   },
   setAuth(token, user) {
-    localStorage.setItem('token', token)
-    localStorage.setItem('user', JSON.stringify(user))
+    if (token) {
+      localStorage.setItem('token', token)
+    } else {
+      localStorage.removeItem('token')
+    }
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user))
+    } else {
+      localStorage.removeItem('user')
+    }
   },
   clearAuth() {
     localStorage.removeItem('token')

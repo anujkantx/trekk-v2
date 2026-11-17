@@ -149,7 +149,8 @@ const handleRegister = async () => {
       password: form.password
     })
 
-    const { token, user } = loginRes.data.data
+    const token = loginRes.data.data.access_token || loginRes.data.data.token
+    const user = loginRes.data.data.user
     authState.setAuth(token, user)
     router.push('/my-bookings')
   } catch (err) {

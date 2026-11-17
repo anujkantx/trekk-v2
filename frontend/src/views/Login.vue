@@ -100,7 +100,8 @@ const handleLogin = async () => {
       password: form.password
     })
 
-    const { token, user } = res.data.data
+    const token = res.data.data.access_token || res.data.data.token
+    const user = res.data.data.user
     authState.setAuth(token, user)
 
     const redirectPath = route.query.redirect
