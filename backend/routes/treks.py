@@ -1,5 +1,7 @@
+import io
+import csv
 from datetime import date
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, Response
 from flask_jwt_extended import verify_jwt_in_request, get_jwt, get_jwt_identity
 from backend.extensions import db, cache
 from backend.models.trek import Trek
@@ -348,3 +350,55 @@ def delete_trek(trek_id):
         "status": "success",
         "message": "Trek deleted successfully"
     }), 200
+
+
+@treks_bp.route("/<int:trek_id>/roster/csv", methods=["GET"])
+@staff_or_admin_required
+def export_trek_roster_csv(trek_id):
+    current_user_id = int(get_jwt_identity())
+    claims = get_jwt()
+    current_role = claims.get("role")
+
+    trek = db.session.get(Trek, trek_id)
+    if not trek:
+        return jsonify({"status": "error", "message": "Trek not found"}), 404
+
+    # Staff can only export roster for treks assigned to them
+    if current_role == "staff" and trek.assigned_staff_id != current_user_id:
+        return jsonify({"status": "error", "message": "Forbidden. You are not assigned to manage this trek."}), 403
+
+    bookings = Booking.query.filter_by(trek_id=trek.id).order_by(Booking.booking_date.desc()).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "Booking ID",
+        "Trekker Name",
+        "Email",
+        "Contact Number",
+        "Slots Booked",
+        "Status",
+        "Booking Date"
+    ])
+
+    for b in bookings:
+        user = b.user
+        writer.writerow([
+            b.id,
+            user.username if user else "N/A",
+            user.email if user else "N/A",
+            user.contact_number if user and user.contact_number else "N/A",
+            b.num_slots,
+            b.status,
+            b.booking_date.strftime("%Y-%m-%d %H:%M:%S") if b.booking_date else "N/A"
+        ])
+
+    csv_data = output.getvalue()
+    output.close()
+
+    filename = f"roster_trek_{trek.id}_{trek.name.replace(' ', '_')}.csv"
+    return Response(
+        csv_data,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )

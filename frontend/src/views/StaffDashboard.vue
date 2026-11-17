@@ -125,12 +125,23 @@
     >
       <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow">
-          <div class="modal-header border-bottom">
+          <div class="modal-header border-bottom d-flex justify-content-between align-items-center">
             <h5 class="modal-title fw-bold">
-              <i class="bi bi-people-fill text-primary me-2"></i>
               Participants: {{ selectedTrek ? selectedTrek.name : '' }}
             </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="d-flex align-items-center gap-2">
+              <button
+                v-if="participants.length > 0"
+                @click="exportRosterCsv"
+                :disabled="exportingRoster"
+                class="btn btn-outline-success btn-sm fw-semibold"
+              >
+                <span v-if="exportingRoster" class="spinner-border spinner-border-sm me-1"></span>
+                <i v-else class="bi bi-file-earmark-spreadsheet me-1"></i>
+                {{ exportingRoster ? 'Exporting...' : 'Export CSV' }}
+              </button>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
           </div>
 
           <div class="modal-body p-0">
@@ -223,6 +234,7 @@ const alert = reactive({ type: '', message: '' })
 const selectedTrek = ref(null)
 const participants = ref([])
 const modalLoading = ref(false)
+const exportingRoster = ref(false)
 let bootstrapModalInstance = null
 
 const fetchTreks = async () => {
@@ -271,6 +283,29 @@ const openParticipantsModal = async (trek) => {
     showAlert('danger', 'Failed to load participants.')
   } finally {
     modalLoading.value = false
+  }
+}
+
+const exportRosterCsv = async () => {
+  if (!selectedTrek.value) return
+  exportingRoster.value = true
+  try {
+    const res = await api.get(`/treks/${selectedTrek.value.id}/roster/csv`, {
+      responseType: 'blob'
+    })
+    const filename = `roster_trek_${selectedTrek.value.id}.csv`
+    const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    showAlert('success', 'Participant roster exported successfully.')
+  } catch (err) {
+    showAlert('danger', 'Failed to export participant roster.')
+  } finally {
+    exportingRoster.value = false
   }
 }
 

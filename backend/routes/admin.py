@@ -1,10 +1,12 @@
-from flask import Blueprint, request, jsonify
+import os
+from flask import Blueprint, request, jsonify, send_file
 from flask_jwt_extended import get_jwt_identity
 from backend.extensions import db, cache
 from backend.models.user import User
 from backend.models.trek import Trek
 from backend.models.booking import Booking
 from backend.utils.decorators import admin_required
+from backend.tasks.report_tasks import generate_monthly_activity_report
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 
@@ -175,3 +177,20 @@ def get_dashboard_stats():
             }
         }
     }), 200
+
+
+@admin_bp.route("/reports/monthly", methods=["GET"])
+@admin_required
+def download_monthly_report():
+    res = generate_monthly_activity_report()
+    if res.get("status") != "success":
+        return jsonify({"status": "error", "message": res.get("message", "Failed to generate report")}), 500
+
+    file_path = res["file_path"]
+    filename = os.path.basename(file_path)
+    return send_file(
+        file_path,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/pdf"
+    )

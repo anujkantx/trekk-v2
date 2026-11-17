@@ -127,6 +127,15 @@
                   <i class="bi bi-person-plus me-2 fs-5"></i> Add Staff Member
                 </button>
                 <button
+                  @click="downloadMonthlyReport"
+                  :disabled="reportDownloading"
+                  class="btn btn-outline-dark py-2 fw-semibold d-flex align-items-center justify-content-center"
+                >
+                  <span v-if="reportDownloading" class="spinner-border spinner-border-sm me-2"></span>
+                  <i v-else class="bi bi-file-earmark-pdf text-danger me-2 fs-5"></i>
+                  {{ reportDownloading ? 'Generating PDF...' : 'Download Monthly Report' }}
+                </button>
+                <button
                   @click="activeTab = 'treks'"
                   class="btn btn-outline-secondary py-2 fw-semibold d-flex align-items-center justify-content-center"
                 >
@@ -514,6 +523,7 @@ const staffUsers = ref([])
 const allUsers = ref([])
 const userSearch = ref('')
 const alert = reactive({ type: '', message: '' })
+const reportDownloading = ref(false)
 
 // Trek Form State
 const editingTrekId = ref(null)
@@ -570,6 +580,27 @@ const fetchBookings = async () => {
     showAlert('danger', 'Failed to load bookings.')
   } finally {
     bookingsLoading.value = false
+  }
+}
+
+const downloadMonthlyReport = async () => {
+  reportDownloading.value = true
+  try {
+    const res = await api.get('/admin/reports/monthly', { responseType: 'blob' })
+    const now = new Date()
+    const filename = `monthly_report_${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}.pdf`
+    const blob = new Blob([res.data], { type: 'application/pdf' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    showAlert('success', 'Monthly platform report downloaded successfully.')
+  } catch (err) {
+    showAlert('danger', 'Failed to generate monthly report.')
+  } finally {
+    reportDownloading.value = false
   }
 }
 
