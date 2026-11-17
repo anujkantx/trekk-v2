@@ -1,11 +1,12 @@
 import os
 from datetime import date
 from flask import Blueprint, request, jsonify, send_file
-from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, decode_token
 from backend.extensions import db, cache
 from backend.models.booking import Booking
 from backend.models.trek import Trek
 from backend.models.export_job import ExportJob
+from backend.models.user import User
 from backend.tasks.export_tasks import export_user_bookings_csv
 from backend.utils.decorators import active_user_required, admin_required, staff_or_admin_required
 
@@ -349,12 +350,28 @@ def list_export_jobs():
 
 
 @bookings_bp.route("/export/<int:job_id>/download", methods=["GET"])
-@jwt_required()
-@active_user_required
 def download_exported_bookings(job_id):
-    current_user_id = int(get_jwt_identity())
-    claims = get_jwt()
-    current_role = claims.get("role")
+    # Support token in Authorization header OR in query parameter (?token=...)
+    token = None
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header.split(" ", 1)[1].strip()
+    elif request.args.get("token"):
+        token = request.args.get("token").strip()
+
+    if not token:
+        return jsonify({"status": "error", "message": "Missing Authorization header or token query parameter"}), 401
+
+    try:
+        decoded = decode_token(token)
+        current_user_id = int(decoded["sub"])
+        current_role = decoded.get("role")
+    except Exception:
+        return jsonify({"status": "error", "message": "Invalid or expired token"}), 401
+
+    user = db.session.get(User, current_user_id)
+    if not user or user.status != "active":
+        return jsonify({"status": "error", "message": "Account deactivated or not found"}), 403
 
     job = db.session.get(ExportJob, job_id)
     if not job:

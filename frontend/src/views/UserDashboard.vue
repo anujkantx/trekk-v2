@@ -183,15 +183,16 @@
                   </span>
                 </td>
                 <td class="text-end pe-3">
-                  <a
+                  <button
                     v-if="job.status === 'COMPLETED'"
-                    :href="`/api/bookings/export/${job.id}/download`"
+                    @click="downloadExport(job)"
                     class="btn btn-outline-primary btn-sm py-0"
-                    target="_blank"
-                    download
+                    :disabled="downloadingJobId === job.id"
                   >
-                    <i class="bi bi-download me-1"></i> Download CSV
-                  </a>
+                    <span v-if="downloadingJobId === job.id" class="spinner-border spinner-border-sm me-1"></span>
+                    <i v-else class="bi bi-download me-1"></i>
+                    {{ downloadingJobId === job.id ? 'Downloading...' : 'Download CSV' }}
+                  </button>
                   <span v-else class="text-muted small">Processing in Celery...</span>
                 </td>
               </tr>
@@ -212,6 +213,7 @@ const exportJobs = ref([])
 const loading = ref(true)
 const exportLoading = ref(false)
 const cancellingId = ref(null)
+const downloadingJobId = ref(null)
 const alert = reactive({ type: '', message: '' })
 
 const fetchBookings = async () => {
@@ -267,6 +269,37 @@ const triggerExport = async () => {
     showAlert('danger', 'Failed to trigger export.')
   } finally {
     exportLoading.value = false
+  }
+}
+
+const downloadExport = async (job) => {
+  downloadingJobId.value = job.id
+  try {
+    const res = await api.get(`/bookings/export/${job.id}/download`, {
+      responseType: 'blob'
+    })
+
+    let filename = `booking_history_job_${job.id}.csv`
+    const disposition = res.headers['content-disposition']
+    if (disposition && disposition.includes('filename=')) {
+      const match = disposition.match(/filename="?([^";]+)"?/)
+      if (match && match[1]) filename = match[1]
+    }
+
+    const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    showAlert('success', `Export file "${filename}" downloaded successfully.`)
+  } catch (err) {
+    showAlert('danger', 'Failed to download CSV export.')
+  } finally {
+    downloadingJobId.value = null
   }
 }
 
