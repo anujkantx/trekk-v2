@@ -481,7 +481,19 @@ const fetchStats = async () => {
   statsLoading.value = true
   try {
     const res = await api.get('/admin/dashboard-stats')
-    stats.value = res.data.data
+    const d = res.data.data
+    stats.value = {
+      total_trekkers: d.users?.total_trekkers || 0,
+      total_staff: d.users?.total_staff || 0,
+      total_treks: d.treks?.total || 0,
+      open_treks: d.treks?.open || 0,
+      pending_treks: d.treks?.pending || 0,
+      completed_treks: d.treks?.completed || 0,
+      closed_treks: d.treks?.closed || 0,
+      total_bookings: d.bookings?.total || 0,
+      active_bookings: d.bookings?.booked || 0,
+      total_revenue: d.financials?.total_revenue || 0
+    }
     renderChart()
   } catch (err) {
     showAlert('danger', 'Failed to load dashboard metrics.')

@@ -64,7 +64,7 @@ def login():
     if not data:
         return jsonify({"status": "error", "message": "JSON body is required"}), 400
 
-    identifier = (data.get("username") or data.get("email") or "").strip()
+    identifier = (data.get("identifier") or data.get("username") or data.get("email") or "").strip()
     password = data.get("password", "")
 
     if not identifier or not password:
