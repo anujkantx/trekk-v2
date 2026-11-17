@@ -3,10 +3,7 @@
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
-        <h2 class="fw-bold mb-1">
-          <i class="bi bi-speedometer2 text-danger me-2"></i>Platform Administration
-        </h2>
-        <p class="text-muted small mb-0">System metrics, trek operations, staff assignment, and user moderation</p>
+        <h2 class="fw-bold mb-0">Admin Dashboard</h2>
       </div>
       <div>
         <button @click="refreshAll" class="btn btn-outline-secondary btn-sm">
@@ -30,7 +27,7 @@
           :class="{ 'active': activeTab === 'overview' }"
           @click="activeTab = 'overview'"
         >
-          <i class="bi bi-bar-chart-fill me-1"></i> Analytics & Overview
+          <i class="bi bi-bar-chart-fill me-1"></i> Overview
         </button>
       </li>
       <li class="nav-item">
@@ -39,7 +36,7 @@
           :class="{ 'active': activeTab === 'treks' }"
           @click="activeTab = 'treks'"
         >
-          <i class="bi bi-compass-fill me-1"></i> Trek Operations
+          <i class="bi bi-compass-fill me-1"></i> Treks
         </button>
       </li>
       <li class="nav-item">
@@ -48,7 +45,7 @@
           :class="{ 'active': activeTab === 'staff' }"
           @click="activeTab = 'staff'"
         >
-          <i class="bi bi-person-badge-fill me-1"></i> Staff Onboarding
+          <i class="bi bi-person-badge-fill me-1"></i> Staff
         </button>
       </li>
       <li class="nav-item">
@@ -57,7 +54,7 @@
           :class="{ 'active': activeTab === 'users' }"
           @click="activeTab = 'users'"
         >
-          <i class="bi bi-people-fill me-1"></i> User Directory & Moderation
+          <i class="bi bi-people-fill me-1"></i> Users
         </button>
       </li>
     </ul>
@@ -108,37 +105,101 @@
           </div>
         </div>
 
-        <!-- Chart Section -->
+        <!-- Quick Actions & Bookings Section -->
         <div class="row g-4">
-          <div class="col-lg-6">
-            <div class="card border-0 shadow-sm p-4">
-              <h5 class="fw-bold mb-3">Trek Lifecycle Breakdown</h5>
-              <div style="height: 300px; position: relative;">
-                <canvas id="trekChart"></canvas>
+          <!-- Card 1: Quick Actions -->
+          <div class="col-12 col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-header bg-white py-3 border-bottom">
+                <h5 class="fw-bold mb-0">Quick Actions</h5>
+              </div>
+              <div class="card-body p-4 d-flex flex-column gap-3 justify-content-center">
+                <button
+                  @click="openCreateTrekModal"
+                  class="btn btn-primary py-2 fw-semibold d-flex align-items-center justify-content-center shadow-sm"
+                >
+                  <i class="bi bi-plus-circle me-2 fs-5"></i> Add New Trek
+                </button>
+                <button
+                  @click="openAddStaffModal"
+                  class="btn btn-outline-primary py-2 fw-semibold d-flex align-items-center justify-content-center"
+                >
+                  <i class="bi bi-person-plus me-2 fs-5"></i> Add Staff Member
+                </button>
+                <button
+                  @click="activeTab = 'treks'"
+                  class="btn btn-outline-secondary py-2 fw-semibold d-flex align-items-center justify-content-center"
+                >
+                  <i class="bi bi-compass me-2 fs-5"></i> Manage Treks Catalog
+                </button>
+                <button
+                  @click="activeTab = 'users'"
+                  class="btn btn-outline-secondary py-2 fw-semibold d-flex align-items-center justify-content-center"
+                >
+                  <i class="bi bi-people me-2 fs-5"></i> Moderate Users
+                </button>
               </div>
             </div>
           </div>
-          <div class="col-lg-6">
-            <div class="card border-0 shadow-sm p-4">
-              <h5 class="fw-bold mb-3">Quick Platform Status</h5>
-              <ul class="list-group list-group-flush">
-                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                  <span>Pending Staff Review</span>
-                  <span class="badge bg-warning text-dark">{{ stats.pending_treks || 0 }}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                  <span>Completed Expeditions</span>
-                  <span class="badge bg-primary">{{ stats.completed_treks || 0 }}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                  <span>Closed Treks</span>
-                  <span class="badge bg-secondary">{{ stats.closed_treks || 0 }}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                  <span>Active Reserved Slots</span>
-                  <span class="badge bg-success">{{ stats.active_reserved_slots || 0 }}</span>
-                </li>
-              </ul>
+
+          <!-- Card 2: Bookings -->
+          <div class="col-12 col-lg-8">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0">Bookings</h5>
+                <span class="badge bg-light text-dark border">{{ bookings.length }} Total</span>
+              </div>
+              <div class="card-body p-0">
+                <div v-if="bookingsLoading" class="text-center py-5">
+                  <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                  <span class="ms-2 small text-muted">Loading bookings...</span>
+                </div>
+                <div v-else-if="bookings.length === 0" class="text-center py-5 text-muted small">
+                  <i class="bi bi-inbox text-muted display-6 d-block mb-2"></i>
+                  No bookings found on the platform yet.
+                </div>
+                <div v-else class="table-responsive" style="max-height: 340px; overflow-y: auto;">
+                  <table class="table table-hover align-middle mb-0 small">
+                    <thead class="table-light sticky-top">
+                      <tr>
+                        <th class="ps-3">ID</th>
+                        <th>Trekker</th>
+                        <th>Trek</th>
+                        <th>Slots</th>
+                        <th>Status</th>
+                        <th class="text-end pe-3">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="b in bookings" :key="b.id">
+                        <td class="ps-3 fw-bold text-muted">#{{ b.id }}</td>
+                        <td>
+                          <span class="fw-semibold text-dark">{{ b.username }}</span>
+                          <span class="d-block text-muted" style="font-size: 0.72rem;">{{ b.user_email }}</span>
+                        </td>
+                        <td>
+                          <span class="fw-semibold text-dark">{{ b.trek_name }}</span>
+                          <span class="d-block text-muted" style="font-size: 0.72rem;">{{ b.trek_location }}</span>
+                        </td>
+                        <td><span class="badge bg-light text-dark border">{{ b.num_slots }}</span></td>
+                        <td>
+                          <span
+                            class="badge"
+                            :class="{
+                              'bg-success-subtle text-success border border-success-subtle': b.status === 'Booked',
+                              'bg-danger-subtle text-danger border border-danger-subtle': b.status === 'Cancelled',
+                              'bg-primary-subtle text-primary border border-primary-subtle': b.status === 'Completed'
+                            }"
+                          >
+                            {{ b.status }}
+                          </span>
+                        </td>
+                        <td class="text-end pe-3 text-muted">{{ formatDate(b.booking_date) }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -440,20 +501,19 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, nextTick } from 'vue'
-import Chart from 'chart.js/auto'
+import { ref, reactive, onMounted } from 'vue'
 import api from '../api'
 
 const activeTab = ref('overview')
 const stats = ref({})
 const statsLoading = ref(true)
+const bookings = ref([])
+const bookingsLoading = ref(false)
 const allTreks = ref([])
 const staffUsers = ref([])
 const allUsers = ref([])
 const userSearch = ref('')
 const alert = reactive({ type: '', message: '' })
-
-let chartInstance = null
 
 // Trek Form State
 const editingTrekId = ref(null)
@@ -494,7 +554,6 @@ const fetchStats = async () => {
       active_bookings: d.bookings?.booked || 0,
       total_revenue: d.financials?.total_revenue || 0
     }
-    renderChart()
   } catch (err) {
     showAlert('danger', 'Failed to load dashboard metrics.')
   } finally {
@@ -502,37 +561,16 @@ const fetchStats = async () => {
   }
 }
 
-const renderChart = () => {
-  nextTick(() => {
-    const canvas = document.getElementById('trekChart')
-    if (!canvas) return
-    if (chartInstance) chartInstance.destroy()
-
-    chartInstance = new Chart(canvas, {
-      type: 'doughnut',
-      data: {
-        labels: ['Open', 'Pending', 'Completed', 'Closed'],
-        datasets: [
-          {
-            data: [
-              stats.value.open_treks || 0,
-              stats.value.pending_treks || 0,
-              stats.value.completed_treks || 0,
-              stats.value.closed_treks || 0
-            ],
-            backgroundColor: ['#198754', '#ffc107', '#0d6efd', '#6c757d']
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'bottom' }
-        }
-      }
-    })
-  })
+const fetchBookings = async () => {
+  bookingsLoading.value = true
+  try {
+    const res = await api.get('/bookings')
+    bookings.value = res.data.data || []
+  } catch (err) {
+    showAlert('danger', 'Failed to load bookings.')
+  } finally {
+    bookingsLoading.value = false
+  }
 }
 
 const fetchTreks = async () => {
@@ -566,6 +604,7 @@ const fetchUsers = async () => {
 
 const refreshAll = () => {
   fetchStats()
+  fetchBookings()
   fetchTreks()
   fetchStaff()
   fetchUsers()
