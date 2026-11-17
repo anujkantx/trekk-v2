@@ -1,9 +1,12 @@
+import os
 from datetime import date
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from backend.extensions import db, cache
 from backend.models.booking import Booking
 from backend.models.trek import Trek
+from backend.models.export_job import ExportJob
+from backend.tasks.export_tasks import export_user_bookings_csv
 from backend.utils.decorators import active_user_required, admin_required, staff_or_admin_required
 
 bookings_bp = Blueprint("bookings", __name__, url_prefix="/api/bookings")
@@ -300,3 +303,75 @@ def delete_booking(booking_id):
         "status": "success",
         "message": "Booking deleted successfully"
     }), 200
+
+
+@bookings_bp.route("/export", methods=["POST"])
+@jwt_required()
+@active_user_required
+def trigger_bookings_export():
+    current_user_id = int(get_jwt_identity())
+    job = ExportJob(user_id=current_user_id, status="PENDING")
+    db.session.add(job)
+    db.session.commit()
+
+    # Dispatch Celery async task (with fallback if worker is offline)
+    try:
+        export_user_bookings_csv.delay(job.id)
+    except Exception:
+        export_user_bookings_csv(job.id)
+
+    return jsonify({
+        "status": "success",
+        "message": "Export job initiated successfully",
+        "data": job.to_dict()
+    }), 202
+
+
+@bookings_bp.route("/export-jobs", methods=["GET"])
+@jwt_required()
+@active_user_required
+def list_export_jobs():
+    current_user_id = int(get_jwt_identity())
+    claims = get_jwt()
+    current_role = claims.get("role")
+
+    query = ExportJob.query
+    if current_role == "admin" and request.args.get("all") == "true":
+        pass
+    else:
+        query = query.filter_by(user_id=current_user_id)
+
+    jobs = query.order_by(ExportJob.created_at.desc()).all()
+    return jsonify({
+        "status": "success",
+        "data": [job.to_dict() for job in jobs]
+    }), 200
+
+
+@bookings_bp.route("/export/<int:job_id>/download", methods=["GET"])
+@jwt_required()
+@active_user_required
+def download_exported_bookings(job_id):
+    current_user_id = int(get_jwt_identity())
+    claims = get_jwt()
+    current_role = claims.get("role")
+
+    job = db.session.get(ExportJob, job_id)
+    if not job:
+        return jsonify({"status": "error", "message": "Export job not found"}), 404
+
+    if job.user_id != current_user_id and current_role != "admin":
+        return jsonify({"status": "error", "message": "Access denied"}), 403
+
+    if job.status != "COMPLETED" or not job.file_path or not os.path.exists(job.file_path):
+        return jsonify({
+            "status": "error",
+            "message": f"Export file not ready (current status: '{job.status}')"
+        }), 400
+
+    return send_file(
+        job.file_path,
+        mimetype="text/csv",
+        as_attachment=True,
+        download_name=os.path.basename(job.file_path)
+    )
